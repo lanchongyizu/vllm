@@ -21,7 +21,7 @@ assert Version(ray.__version__) >= Version(
 sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
 
 # Set tensor parallelism per instance.
-tensor_parallel_size = 1
+tensor_parallel_size = 4
 
 # Set number of instances. Each instance will use tensor_parallel_size GPUs.
 num_instances = 1
@@ -32,7 +32,7 @@ class LLMPredictor:
 
     def __init__(self):
         # Create an LLM.
-        self.llm = LLM(model="meta-llama/Llama-2-7b-chat-hf",
+        self.llm = LLM(model="/mnt/nvme0n1/ckpt/llama/Meta-Llama-3-70B-Instruct",
                        tensor_parallel_size=tensor_parallel_size)
 
     def __call__(self, batch: Dict[str, np.ndarray]) -> Dict[str, list]:
@@ -53,7 +53,8 @@ class LLMPredictor:
 
 # Read one text file from S3. Ray Data supports reading multiple files
 # from cloud storage (such as JSONL, Parquet, CSV, binary format).
-ds = ray.data.read_text("s3://anonymous@air-example-data/prompts.txt")
+#ds = ray.data.read_text("s3://anonymous@air-example-data/prompts.txt")
+ds = ray.data.read_text("/workspace/xbzhuang/prompts.txt")
 
 
 # For tensor_parallel_size > 1, we need to create placement groups for vLLM
