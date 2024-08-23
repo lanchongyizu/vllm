@@ -394,6 +394,50 @@ class LoggingStatLogger(StatLoggerBase):
     def info(self, type: str, obj: SupportsMetricsInfo) -> None:
         raise NotImplementedError
 
+class LoggingStatLoggerForDemo(LoggingStatLogger):
+    """LoggingStatLogger is used in LLMEngine to log to Stdout."""
+
+    def log(self, stats: Stats) -> None:
+        """Called by LLMEngine.
+           Logs to Stdout every self.local_interval seconds."""
+
+        if len(stats.time_to_first_tokens_iter) > 0:
+            logger.info(
+                "TTFT: %.3fs",
+                stats.time_to_first_tokens_iter[0],
+            )
+        # Save tracked stats for token counters.
+        self.num_generation_tokens.append(stats.num_generation_tokens_iter)
+
+        # Update spec decode metrics
+        self.maybe_update_spec_decode_metrics(stats)
+
+        # Log locally every local_interval seconds.
+        if local_interval_elapsed(stats.now, self.last_local_log,
+                                  self.local_interval):
+            # Compute summary metrics for tracked stats (and log them
+            # to promethus if applicable).
+            generation_throughput = get_throughput(
+                self.num_generation_tokens,
+                now=stats.now,
+                last_log=self.last_local_log)
+
+            if stats.num_generation_tokens_iter > 0:
+                logger.info(
+                    "generation throughput: %.1f tokens/s",
+                    generation_throughput,
+                )
+
+            if self.spec_decode_metrics is not None:
+                logger.info(
+                    self._format_spec_decode_metrics_str(
+                        self.spec_decode_metrics))
+
+            # Reset tracked stats for next interval.
+            self.num_generation_tokens = []
+            self.last_local_log = stats.now
+            self.spec_decode_metrics = None
+
 
 class PrometheusStatLogger(StatLoggerBase):
     """PrometheusStatLogger is used LLMEngine to log to Promethus."""

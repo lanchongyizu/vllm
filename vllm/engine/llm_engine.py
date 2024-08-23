@@ -437,12 +437,12 @@ class LLMEngine:
                 # We need to set PROMETHEUS_MULTIPROC_DIR environment variable
                 # before prometheus_client is imported.
                 # See https://prometheus.github.io/client_python/multiprocess/
-                from vllm.engine.metrics import (LoggingStatLogger,
+                from vllm.engine.metrics import (LoggingStatLoggerForDemo,
                                                  PrometheusStatLogger)
 
                 self.stat_loggers = {
                     "logging":
-                    LoggingStatLogger(
+                    LoggingStatLoggerForDemo(
                         local_interval=_LOCAL_LOGGING_INTERVAL_SEC),
                     "prometheus":
                     PrometheusStatLogger(
