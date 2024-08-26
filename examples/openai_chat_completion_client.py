@@ -12,25 +12,27 @@ client = OpenAI(
 
 models = client.models.list()
 model = models.data[0].id
+history_openai_format = [{
+    "role": "system",
+    "content": "You are a great ai assistant."
+}]
+print(history_openai_format[0]["content"])
 
-chat_completion = client.chat.completions.create(
-    messages=[{
-        "role": "system",
-        "content": "You are a helpful assistant."
-    }, {
-        "role": "user",
-        "content": "Who won the world series in 2020?"
-    }, {
-        "role":
-        "assistant",
-        "content":
-        "The Los Angeles Dodgers won the World Series in 2020."
-    }, {
-        "role": "user",
-        "content": "Where was it played?"
-    }],
-    model=model,
-)
+while True:
+    print("Input:")
+    message = input()
+    history_openai_format.append({"role": "user", "content": message})
 
-print("Chat completion results:")
-print(chat_completion)
+    chat_completion = client.chat.completions.create(
+        messages=history_openai_format,
+        model=model,
+        stream=True
+    )
+
+    reply = ""
+    for chunk in chat_completion:
+        if chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="")
+            reply += chunk.choices[0].delta.content
+    print()
+    history_openai_format.append({"role": "assistant", "content": reply})

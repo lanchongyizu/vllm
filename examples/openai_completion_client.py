@@ -28,7 +28,7 @@ def main(args):
         n=1,
         stream=stream,
         max_tokens=512,
-        logprobs=3)
+        )
 
     print("Completion results:")
     if stream:
