@@ -147,6 +147,26 @@ def _get_model_initialization_kwargs(
 
     return extra_kwargs
 
+def patch(model, name=None):
+    if name is None:
+        name = type(model).__name__
+    else:
+        name = name + ': ' + type(model).__name__
+
+    def push(*args, _name=name, **kwargs):
+        torch.cuda.nvtx.range_push(_name)
+
+    def pop(*args, **kwargs):
+        torch.cuda.nvtx.range_pop()
+
+    model.register_forward_pre_hook(push)
+    model.register_forward_hook(pop)
+
+    for name, child in model.named_children():
+        patch(child, name)
+
+    return model
+
 
 def build_model(model_class: Type[nn.Module], hf_config: PretrainedConfig,
                 cache_config: Optional[CacheConfig],
@@ -158,10 +178,13 @@ def build_model(model_class: Type[nn.Module], hf_config: PretrainedConfig,
                                                     multimodal_config,
                                                     scheduler_config)
 
-    return model_class(config=hf_config,
+    model = model_class(config=hf_config,
                        cache_config=cache_config,
                        quant_config=quant_config,
                        **extra_kwargs)
+    print(model)
+    patch(model)
+    return model
 
 
 def _initialize_model(

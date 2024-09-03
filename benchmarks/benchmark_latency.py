@@ -65,7 +65,7 @@ def main(args: argparse.Namespace):
         "prompt_token_ids": batch
     } for batch in dummy_prompt_token_ids.tolist()]
 
-    def run_to_completion(profile_dir: Optional[str] = None):
+    def run_to_completion(profile_dir: Optional[str] = None, profiling=False):
         if profile_dir:
             with torch.profiler.profile(
                     activities=[
@@ -82,7 +82,7 @@ def main(args: argparse.Namespace):
             start_time = time.perf_counter()
             llm.generate(dummy_prompts,
                          sampling_params=sampling_params,
-                         use_tqdm=False)
+                         use_tqdm=False, profiling=profiling)
             end_time = time.perf_counter()
             latency = end_time - start_time
             return latency
@@ -104,7 +104,7 @@ def main(args: argparse.Namespace):
     # Benchmark.
     latencies = []
     for _ in tqdm(range(args.num_iters), desc="Profiling iterations"):
-        latencies.append(run_to_completion(profile_dir=None))
+        latencies.append(run_to_completion(profile_dir=None, profiling=True))
     latencies = np.array(latencies)
     percentages = [10, 25, 50, 75, 90, 99]
     percentiles = np.percentile(latencies, percentages)

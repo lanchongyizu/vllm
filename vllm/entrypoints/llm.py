@@ -1,4 +1,6 @@
 import itertools
+import torch
+
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import (Any, ClassVar, Dict, List, Optional, Sequence, Tuple,
@@ -321,6 +323,7 @@ class LLM:
         guided_options_request: Optional[Union[LLMGuidedOptions,
                                                GuidedDecodingRequest]] = None,
         priority: Optional[List[int]] = None,
+        profiling = False
     ) -> List[RequestOutput]:
         """Generates the completions for the input prompts.
 
@@ -387,7 +390,7 @@ class LLM:
             guided_options=guided_options_request,
             priority=priority)
 
-        outputs = self._run_engine(use_tqdm=use_tqdm)
+        outputs = self._run_engine(use_tqdm=use_tqdm, profiling=profiling)
         return LLMEngine.validate_outputs(outputs, RequestOutput)
 
     def beam_search(
@@ -407,7 +410,7 @@ class LLM:
             beam_width: The number of beams to keep at each step.
             max_tokens: The max number of tokens to generate for each prompt.
             temperature: The temperature to use for generation.
-        
+
         TODO: how does beam search work together with length penalty, frequency
         penalty, and stopping criteria, etc.?
         """
@@ -514,7 +517,7 @@ class LLM:
         to the OpenAI API.
 
         Args:
-            messages: A list of conversations or a single conversation. 
+            messages: A list of conversations or a single conversation.
                 - Each conversation is represented as a list of messages.
                 - Each message is a dictionary with 'role' and 'content' keys.
             sampling_params: The sampling parameters for text generation.
@@ -860,7 +863,7 @@ class LLM:
         return params
 
     def _run_engine(
-            self, *, use_tqdm: bool
+            self, *, use_tqdm: bool, profiling=False
     ) -> List[Union[RequestOutput, EmbeddingRequestOutput]]:
         # Initialize tqdm.
         if use_tqdm:
@@ -877,7 +880,11 @@ class LLM:
         outputs: List[Union[RequestOutput, EmbeddingRequestOutput]] = []
         total_in_toks = 0
         total_out_toks = 0
+        step = 0
         while self.llm_engine.has_unfinished_requests():
+            # if step == 1:
+            if step == 1 and profiling:
+                torch.cuda.cudart().cudaProfilerStart()
             step_outputs = self.llm_engine.step()
             for output in step_outputs:
                 if output.finished:
@@ -896,6 +903,10 @@ class LLM:
                                 f"est. speed input: {in_spd:.2f} toks/s, "
                                 f"output: {out_spd:.2f} toks/s")
                         pbar.update(1)
+            # if step == 255:
+            if step == 1 and profiling:
+                torch.cuda.cudart().cudaProfilerStop()
+            step += 1
 
         if use_tqdm:
             pbar.close()
