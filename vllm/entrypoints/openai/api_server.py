@@ -7,6 +7,9 @@ import re
 import signal
 import socket
 import tempfile
+import GPUtil
+import random
+import subprocess
 from argparse import Namespace
 from contextlib import asynccontextmanager
 from functools import partial
@@ -269,6 +272,15 @@ def engine_client(request: Request) -> EngineClient:
 async def health(raw_request: Request) -> Response:
     """Health check."""
     await engine_client(raw_request).check_health()
+    # 0.5,1,1,2.5,0.5,1,1,1,0.5
+    # 360,720,720,1800,360,720,720,720,360
+
+    rand_num = random.randint(360, 720)
+    for i in range(rand_num):
+        subprocess.call("date -d \"+5 seconds\"", shell=True, stdout=subprocess.DEVNULL)
+        logger.info("Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.")
+        if i % 6 == 5:
+            GPUtil.showUtilization(all=True)
     return Response(status_code=200)
 
 

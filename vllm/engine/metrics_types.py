@@ -71,6 +71,7 @@ class StatLoggerBase(ABC):
         self.last_local_log = time.time()
         self.local_interval = local_interval
         self.spec_decode_metrics: Optional["SpecDecodeWorkerMetrics"] = None
+        self.local_interval_times = 0
 
     @abstractmethod
     def log(self, stats: Stats) -> None:

@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 from typing import Counter as CollectionsCounter
 from typing import Dict, List, Optional, Union
 
+import GPUtil
 import numpy as np
 import prometheus_client
 
@@ -340,6 +341,11 @@ class LoggingStatLogger(StatLoggerBase):
                 self.num_generation_tokens,
                 now=stats.now,
                 last_log=self.last_local_log)
+
+            self.local_interval_times += 1
+            if self.local_interval_times > 5:
+                self.local_interval_times = 0
+                GPUtil.showUtilization(all=True)
 
             # Log to stdout.
             logger.info(
