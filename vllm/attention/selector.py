@@ -121,6 +121,11 @@ def _cached_get_attn_backend(
         from vllm.attention.backends.flash_attn import (  # noqa: F401
             FlashAttentionBackend)
         return FlashAttentionBackend
+    if backend == _Backend.FLASH_ATTN_V3:
+        logger.info("Using Flash Attention v3 backend.")
+        from vllm.attention.backends.flash_attn_v3 import (
+            FlashAttentionV3Backend)
+        return FlashAttentionV3Backend
     if backend == _Backend.FLASH_ATTN_VLLM_V1:
         from vllm.v1.attention.backends.flash_attn import (  # noqa: F401
             FlashAttentionBackend as FlashAttentionBackendV1)
@@ -179,7 +184,7 @@ def which_attn_to_use(head_size: int,
                       use_v1: bool = False) -> _Backend:
     """Returns which flash attention backend to use."""
     # Default case.
-    selected_backend = _Backend.FLASH_ATTN
+    selected_backend = _Backend.FLASH_ATTN_V3
 
     # If there are no attention layers (e.g. we are running Mamba),
     # use the placeholder NO_ATTENTION
@@ -209,6 +214,53 @@ def which_attn_to_use(head_size: int,
 
     if use_v1:
         return _Backend.FLASH_ATTN_VLLM_V1
+
+    if selected_backend == _Backend.FLASH_ATTN_V3:
+        if not current_platform.has_device_capability(90):
+            # Volta and Turing NVIDIA GPUs.
+            logger.info(
+                "Cannot use FlashAttention-3 backend for Ampear, Volta and Turing "
+                "GPUs.")
+            selected_backend = _Backend.FLASH_ATTN
+        elif dtype not in (torch.float16, torch.bfloat16):
+            logger.info(
+                "Cannot use FlashAttention-3 backend for dtype other than "
+                "torch.float16 or torch.bfloat16.")
+            selected_backend = _Backend.FLASH_ATTN
+        elif kv_cache_dtype is not None and kv_cache_dtype.startswith("fp8"):
+            logger.info(
+                "Cannot use FlashAttention-3 backend for FP8 KV cache.")
+            logger.warning(
+                "Please use FlashInfer backend with FP8 KV Cache for "
+                "better performance by setting environment variable  "
+                "VLLM_ATTENTION_BACKEND=FLASHINFER")
+            selected_backend = _Backend.FLASH_ATTN
+        elif block_size % 64 != 0:
+            logger.info(
+                "Cannot use FlashAttention-3 backend for block size not "
+                "divisible by 64.")
+            selected_backend = _Backend.FLASH_ATTN
+
+    # FlashAttnV3 is valid for the model, checking if the package is installed.
+    if selected_backend == _Backend.FLASH_ATTN_V3:
+        try:
+            import flash_attn_interface  # noqa: F401
+            from vllm.attention.backends.flash_attn_v3 import (  # noqa: F401
+                FlashAttentionV3Backend)
+
+            supported_sizes = FlashAttentionV3Backend.get_supported_head_sizes()
+            if head_size not in supported_sizes:
+                logger.info(
+                    "Cannot use FlashAttention-3 backend for head size %d.",
+                    head_size)
+                selected_backend = _Backend.FLASH_ATTN
+        except ImportError:
+            logger.info(
+                "Cannot use FlashAttention-3 backend because the "
+                "flashattn-hopper package is not found. "
+                "Make sure that flashattn-hopper was built and installed "
+                "(on by default).")
+            selected_backend = _Backend.FLASH_ATTN
 
     # FlashAttn in NVIDIA GPUs.
     if selected_backend == _Backend.FLASH_ATTN:

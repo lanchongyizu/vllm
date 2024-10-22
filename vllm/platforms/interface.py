@@ -13,6 +13,7 @@ else:
 
 class _Backend(enum.Enum):
     FLASH_ATTN = enum.auto()
+    FLASH_ATTN_V3 = enum.auto()
     FLASH_ATTN_VLLM_V1 = enum.auto()
     XFORMERS = enum.auto()
     ROCM_FLASH = enum.auto()
