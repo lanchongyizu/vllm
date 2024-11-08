@@ -144,3 +144,14 @@ class CudaPlatform(Platform):
                             exc_info=error)
                         return False
         return True
+
+    @classmethod
+    def log_device_usage_info(cls):
+        pynvml.nvmlInit()
+        gpu_num = pynvml.nvmlDeviceGetCount()
+        for i in range(gpu_num):
+            handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            util_info = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            dev_name = pynvml.nvmlDeviceGetName(handle)
+            logger.info(f"GPU ID:{i}, GPU Name:{dev_name}, GPU Util:{util_info.gpu:3}%, Mem Free:{mem_info.free//1024//1024:5}MB, Mem Used:{mem_info.used//1024//1024:5}MB, Mem Total:{mem_info.total//1024//1024:5}MB")

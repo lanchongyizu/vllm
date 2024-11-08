@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 from typing import Counter as CollectionsCounter
 from typing import Dict, List, Optional, Union
 
-import GPUtil
 import numpy as np
 import prometheus_client
 
@@ -10,6 +9,7 @@ from vllm.engine.metrics_types import (StatLoggerBase, Stats,
                                        SupportsMetricsInfo)
 from vllm.executor.ray_utils import ray
 from vllm.logger import init_logger
+from vllm.platforms import current_platform
 
 if ray is not None:
     from ray.util import metrics as ray_metrics
@@ -345,7 +345,7 @@ class LoggingStatLogger(StatLoggerBase):
             self.local_interval_times += 1
             if self.local_interval_times > 5:
                 self.local_interval_times = 0
-                GPUtil.showUtilization(all=True)
+                current_platform.log_device_usage_info()
 
             # Log to stdout.
             logger.info(

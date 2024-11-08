@@ -94,6 +94,11 @@ class Platform:
         raise NotImplementedError
 
     @classmethod
+    def log_device_usage_info(cls):
+        """Log device usage info."""
+        raise NotImplementedError
+
+    @classmethod
     def inference_mode(cls):
         """A device-specific wrapper of `torch.inference_mode`.
 
